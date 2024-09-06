@@ -16,5 +16,5 @@ pub const File = union(enum) {
     stderr: void,
     stdin: void,
     stdout: void,
-    file: std.posix.fd_t,
+    file: []const u8,
 };
