@@ -1,4 +1,5 @@
 const std = @import("std");
+const Dict = @import("Dict.zig").Dict;
 
 pub const String = struct {
     data: std.ArrayList(u8),
@@ -50,7 +51,21 @@ const fmtIter = struct {
 pub fn format(fmtStr: []const u8, alloc: std.mem.Allocator, dict: Dict) !String {
     var str = String.init(alloc);
     errdefer str.deinit();
-
+    var iter = fmtIter{ .text = fmtStr };
+    while (try iter.next()) |item| {
+        switch (item) {
+            .fmt => |f| {
+                if (dict.get(f)) |d| {
+                    try str.data.appendSlice(d);
+                } else {
+                    return error.MissingKey;
+                }
+            },
+            .txt => |t| {
+                try str.data.appendSlice(t);
+            },
+        }
+    }
     return str;
 }
 
@@ -61,12 +76,12 @@ test {
         "{name}Hello {name} ",
         "{name}{name} ",
     };
-
+    var dict = Dict.init(std.testing.allocator);
+    defer dict.deinit();
+    try dict.push("name", "Test1");
     for (fmtstrs) |f| {
-        std.log.err("Line: [{s}]", .{f});
-        var iter = fmtIter{ .text = f };
-        while (try iter.next()) |val| {
-            std.log.err("{}", .{val});
-        }
+        var str = try format(f, std.testing.allocator, dict);
+        defer str.deinit();
+        std.log.err("{s}", .{str.data.items});
     }
 }

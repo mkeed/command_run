@@ -1,20 +1,15 @@
 const std = @import("std");
 const Proc = @import("Proc");
 
-pub const CommandList = struct {
-    cmds: []const Command,
+pub const File = union(enum) {
+    std_in: void,
+    std_out: void,
+    std_err: void,
 };
 
 pub const Command = struct {
-    procs: []const Proc,
-    input: File,
-    output: File,
-    err: []const ?File,
-};
-
-pub const File = union(enum) {
-    stderr: void,
-    stdin: void,
-    stdout: void,
-    file: []const u8,
+    pipeline: []const Proc,
+    in: File = .std_in,
+    out: File = .std_out,
+    err: File = .std_err,
 };
