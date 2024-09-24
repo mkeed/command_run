@@ -1,33 +1,51 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
 const std = @import("std");
+const ArgParse = @import("ArgParse.zig");
+
+pub const CommandRunOpts = struct {
+    pub fn init(alloc: std.mem.Allocator) CommandRunOpts {
+        _ = alloc;
+        return CommandRunOpts{};
+    }
+    pub fn deinit(self: CommandRunOpts) void {
+        _ = self;
+    }
+    version: bool = false,
+    dry_run: bool = false,
+    @"test": bool = false,
+    port: ?isize = null,
+};
+
+const definition = ArgParse.ProgDef{
+    .name = "command_run",
+    .opts = &.{
+        .{
+            .field_name = "version",
+            .long_opt = "--version",
+            .short_opt = 'v',
+        },
+        .{
+            .field_name = "dry_run",
+            .long_opt = "--dry-run",
+        },
+        .{
+            .field_name = "test",
+            .long_opt = "--test",
+            .short_opt = 't',
+        },
+        //.{
+        //.field_name = "port",
+        //.long_opt = "--port",
+        //.short_opt = 'p',
+        //},
+    },
+    .T = CommandRunOpts,
+};
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-    const input_bytes = std.testing.fuzzInput(.{});
-    try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input_bytes));
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const alloc = gpa.allocator();
+    const opts = try ArgParse.runOpt(definition, alloc);
+    defer opts.deinit();
+    std.log.info("[{}]", .{opts});
 }
